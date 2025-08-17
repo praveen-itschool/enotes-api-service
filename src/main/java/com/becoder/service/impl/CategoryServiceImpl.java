@@ -5,7 +5,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,63 +19,151 @@ import com.becoder.entity.Category;
 import com.becoder.repository.CategoryRepository;
 import com.becoder.service.CategoryService;
 
-@Service   // ✅ Service annotation सही है
+@Service // ✅ Service annotation सही है
 public class CategoryServiceImpl implements CategoryService {
 
-    @Autowired
-    private CategoryRepository categoryRepository;   // ✅ Repository inject
+	@Autowired
+	private CategoryRepository categoryRepository; // ✅ Repository inject
+	@Autowired
+	private ModelMapper mapper;
 
-    @Override
-    public Boolean saveCategory(CategoryDto categoryDto) {
-        Category category = new Category();
-        BeanUtils.copyProperties(categoryDto, category);
-        category.setIsDeleted(false);   // नया category active रहेगा
-        category.setCreatedBy(1);       // अभी hardcoded, बाद में login userId लेना चाहिए
-        category.setCreatedOn(new Date()); // ✅ Date assign किया (क्योंकि BaseModel में Date है)
-        Category saved = categoryRepository.save(category);
+	
+	
+	/*
+@Override
+public Boolean saveCategory(CategoryDto categoryDto) {
+    Category category = new Category();
 
-        if (ObjectUtils.isEmpty(saved)) {
-            return false;
-        }
-        return true;
-    }
+    // DTO → Entity copy
+    BeanUtils.copyProperties(categoryDto, category);
 
-    @Override
-    public List<CategoryDto> getAllCategory() {
-        List<Category> categories = categoryRepository.findAll();
-        return categories.stream()
-                .map(cat -> {
-                    CategoryDto dto = new CategoryDto();
-                    BeanUtils.copyProperties(cat, dto);
-                    return dto;
-                })
-                .collect(Collectors.toList());
-    }
+    // Extra fields manually set करने पड़ेंगे (क्योंकि DTO में ये नहीं होते)
+    category.setIsDeleted(false); // नया category delete नहीं रहेगा
+    category.setCreatedBy(1);     // अभी hardcoded, बाद में login userId लेना चाहिए
+    category.setCreatedOn(new Date()); // BaseModel का createdOn field
 
-    @Override
-    public List<CategoryResponse> getActiveCategory() {
-      return null;
-    }
+    Category saved = categoryRepository.save(category);
 
-    @Override
-    public Category getCategoryById(Integer id) throws Exception {
-        Optional<Category> optional = categoryRepository.findById(id);
-        if (optional.isPresent()) {
-            return optional.get();
-        } else {
-            throw new Exception("Category not found with id " + id);
-        }
-    }
-
-    @Override
-    public Boolean deleteCategory(Integer id) {
-        Optional<Category> optional = categoryRepository.findById(id);
-        if (optional.isPresent()) {
-            Category category = optional.get();
-            category.setIsDeleted(true); // Soft delete
-            categoryRepository.save(category);
-            return true;
-        }
+    if (ObjectUtils.isEmpty(saved)) {
         return false;
     }
+    return true;
+}
+
+	 */
+	@Override
+	public Boolean saveCategory(CategoryDto categoryDto) {
+		/*
+		 * Category category = new Category(); BeanUtils.copyProperties(categoryDto,
+		 * category); category.setIsDeleted(false); // नया category active रहेगा
+		 * category.setCreatedBy(1); // अभी hardcoded, बाद में login userId लेना चाहिए
+		 * category.setCreatedOn(new Date()); // ✅ Date assign किया (क्योंकि BaseModel
+		 * में Date है) Category saved = categoryRepository.save(category);
+		 * 
+		 * if (ObjectUtils.isEmpty(saved)) { return false; }
+		 * 
+		 */
+
+		
+		Category category = mapper.map(categoryDto, Category.class);
+		//Category category = new Category();
+		//category.setName(categoryDto.getName());
+		//category.setDescription(categoryDto.getDescription());
+	//	category.setIsActive(categoryDto.getIsActive());
+		category.setIsDeleted(false); // नया category active रहेगा
+		category.setCreatedBy(1); // अभी hardcoded, बाद में login userId लेना चाहिए
+		category.setCreatedOn(new Date()); // ✅ Date assign किया (क्योंकि BaseModel में Date है)
+		Category saved = categoryRepository.save(category);
+
+		if (ObjectUtils.isEmpty(saved)) {
+			return false;
+		}
+		return true;
+	}
+/*
+	@Override
+	public List<CategoryDto> getAllCategory() {
+		List<Category> categories = categoryRepository.findAll();
+		return categories.stream().map(cat -> {
+			CategoryDto dto = new CategoryDto();
+			BeanUtils.copyProperties(cat, dto);
+			return dto;
+		}).collect(Collectors.toList());
+	}
+*/
+	
+	@Override
+    public List<CategoryDto> getAllCategory() {
+        List<Category> categories = categoryRepository.findAll();
+
+        return categories.stream()
+                .map(cat -> mapper.map(cat, CategoryDto.class)) // ✅ BeanUtils की जगह
+                .collect(Collectors.toList());
+    }
+	@Override
+	public List<CategoryResponse> getActiveCategory() {
+	    List<Category> categories = categoryRepository.findByisActiveTrue();
+
+	    List<CategoryResponse> categoryResponse = categories.stream()
+	            .map(cat -> mapper.map(cat, CategoryResponse.class)) // ✅ हर entity को map करें
+	            .collect(Collectors.toList());
+
+	    return categoryResponse;
+	}
+
+	/*
+@Override
+public List<CategoryResponse> getActiveCategory() {
+    List<Category> categories = categoryRepository.findByIsActiveTrue();
+
+    List<CategoryResponse> categoryResponses = categories.stream().map(cat -> {
+        CategoryResponse dto = new CategoryResponse();
+        BeanUtils.copyProperties(cat, dto);
+        return dto;
+    }).collect(Collectors.toList());
+
+    return categoryResponses;
+}
+
+	 * 
+	 */
+	// stream api without stream api with beanutils.copy prorties
+	/*
+@Override
+public List<CategoryResponse> getActiveCategory() {
+    List<Category> categories = categoryRepository.findByIsActiveTrue();
+    List<CategoryResponse> categoryResponses = new ArrayList<>();
+
+    for (Category cat : categories) {
+        CategoryResponse dto = new CategoryResponse();
+        BeanUtils.copyProperties(cat, dto);
+        categoryResponses.add(dto);
+    }
+
+    return categoryResponses;
+}
+
+	 */
+
+	@Override
+	public Category getCategoryById(Integer id) throws Exception {
+		Optional<Category> optional = categoryRepository.findById(id);
+		if (optional.isPresent()) {
+			return optional.get();
+		} else {
+			throw new Exception("Category not found with id " + id);
+		}
+	}
+
+	@Override
+	public Boolean deleteCategory(Integer id) {
+		Optional<Category> optional = categoryRepository.findById(id);
+		if (optional.isPresent()) {
+			Category category = optional.get();
+			category.setIsDeleted(true); // Soft delete
+			categoryRepository.save(category);
+			return true;
+		}
+		return false;
+	}
 }
