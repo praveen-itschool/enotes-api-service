@@ -9,6 +9,7 @@ import com.becoder.entity.Category;
 
 public interface CategoryRepository extends JpaRepository<Category, Integer>{
 
+
 	List<Category> findByIsActiveTrueAndIsDeletedFalse();
 
 	Optional<Category> findByIdAndIsDeletedFalse(Integer id);
@@ -16,7 +17,10 @@ public interface CategoryRepository extends JpaRepository<Category, Integer>{
 	List<Category> findByIsDeletedFalse();
 
 	Boolean existsByName(String name);
+
+
 	List<Category> findByisActiveTrue();
 
 
+	
 }
