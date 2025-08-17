@@ -94,7 +94,7 @@ public Boolean saveCategory(CategoryDto categoryDto) {
 	
 	@Override
     public List<CategoryDto> getAllCategory() {
-        List<Category> categories = categoryRepository.findAll();
+        List<Category> categories = categoryRepository.findByIsDeletedFalse();
 
         return categories.stream()
                 .map(cat -> mapper.map(cat, CategoryDto.class)) // ✅ BeanUtils की जगह
@@ -146,24 +146,36 @@ public List<CategoryResponse> getActiveCategory() {
 	 */
 
 	@Override
-	public Category getCategoryById(Integer id) throws Exception {
-		Optional<Category> optional = categoryRepository.findById(id);
-		if (optional.isPresent()) {
-			return optional.get();
-		} else {
-			throw new Exception("Category not found with id " + id);
-		}
+	public CategoryDto getCategoryById(Integer id) {
+	    Optional<Category> optionalCategory = categoryRepository.findByIdAndIsDeletedFalse(id);
+
+	    if (optionalCategory.isPresent()) {
+	        Category category = optionalCategory.get();
+	        category.setName(category.getName().toUpperCase());
+	        category.setDescription(category.getDescription().toUpperCase());
+	        return mapper.map(category, CategoryDto.class);
+	    } else {
+	       return null;
+	    }
 	}
 
 	@Override
+	//@CacheEvict(value = "getCategoryById" , key = "#id")
 	public Boolean deleteCategory(Integer id) {
-		Optional<Category> optional = categoryRepository.findById(id);
-		if (optional.isPresent()) {
-			Category category = optional.get();
-			category.setIsDeleted(true); // Soft delete
+		Optional<Category> findByCatgeory = categoryRepository.findByIdAndIsDeletedFalse(id);
+
+		if (findByCatgeory.isPresent()) {
+			Category category = findByCatgeory.get();
+			category.setIsDeleted(true);
 			categoryRepository.save(category);
+			
+			// remove from cache
+		//	cacheService.removeCacheByName(Arrays.asList("allCategory","activeCategory"));
+			
 			return true;
 		}
 		return false;
-	}
+	
+
+}
 }
