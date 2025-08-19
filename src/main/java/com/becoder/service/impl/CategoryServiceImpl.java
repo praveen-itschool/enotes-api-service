@@ -16,6 +16,7 @@ import org.springframework.util.ObjectUtils;
 import com.becoder.dto.CategoryDto;
 import com.becoder.dto.CategoryResponse;
 import com.becoder.entity.Category;
+import com.becoder.exception.ResourceNotFoundException;
 import com.becoder.repository.CategoryRepository;
 import com.becoder.service.CategoryService;
 
@@ -168,17 +169,17 @@ public List<CategoryResponse> getActiveCategory() {
 	 */
 
 	@Override
-	public CategoryDto getCategoryById(Integer id) {
-	    Optional<Category> optionalCategory = categoryRepository.findByIdAndIsDeletedFalse(id);
+	//@Cacheable(value = "getCategoryById" , key = "#id")
+	public CategoryDto getCategoryById(Integer id) throws Exception {
 
-	    if (optionalCategory.isPresent()) {
-	        Category category = optionalCategory.get();
-	        category.setName(category.getName().toUpperCase());
-	        category.setDescription(category.getDescription().toUpperCase());
-	        return mapper.map(category, CategoryDto.class);
-	    } else {
-	       return null;
-	    }
+		Category category = categoryRepository.findByIdAndIsDeletedFalse(id)
+				.orElseThrow(() -> new ResourceNotFoundException("Category not found with id=" + id));
+
+		if (!ObjectUtils.isEmpty(category)) {
+			category.getName().toUpperCase();
+			return mapper.map(category, CategoryDto.class);
+		}
+		return null;
 	}
 
 	@Override
