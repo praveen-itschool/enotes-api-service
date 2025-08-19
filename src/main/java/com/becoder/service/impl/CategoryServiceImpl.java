@@ -66,6 +66,9 @@ public Boolean saveCategory(CategoryDto categoryDto) {
 
 		
 		Category category = mapper.map(categoryDto, Category.class);
+		if(ObjectUtils.isEmpty(category.getId())) {
+			
+	
 		//Category category = new Category();
 		//category.setName(categoryDto.getName());
 		//category.setDescription(categoryDto.getDescription());
@@ -73,6 +76,9 @@ public Boolean saveCategory(CategoryDto categoryDto) {
 		category.setIsDeleted(false); // नया category active रहेगा
 		category.setCreatedBy(1); // अभी hardcoded, बाद में login userId लेना चाहिए
 		category.setCreatedOn(new Date()); // ✅ Date assign किया (क्योंकि BaseModel में Date है)
+		}else {
+			updateCategory(category);
+		}
 		Category saved = categoryRepository.save(category);
 
 		if (ObjectUtils.isEmpty(saved)) {
@@ -80,6 +86,22 @@ public Boolean saveCategory(CategoryDto categoryDto) {
 		}
 		return true;
 	}
+	private void updateCategory(Category category) {
+	    Optional<Category> findById = categoryRepository.findById(category.getId());
+	    if (findById.isPresent()) {
+	        Category existCategory = findById.get();
+
+	        // ✅ Preserve original values
+	        category.setCreatedBy(existCategory.getCreatedBy());
+	        category.setCreatedOn(existCategory.getCreatedOn());
+	        category.setIsDeleted(existCategory.getIsDeleted());
+
+	        // ✅ Set audit fields for update
+	        category.setUpdatedBy(1); // later take from logged-in user
+	        category.setUpdatedOn(new Date());
+	    }
+	}
+
 /*
 	@Override
 	public List<CategoryDto> getAllCategory() {
